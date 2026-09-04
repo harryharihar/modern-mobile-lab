@@ -28,16 +28,32 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
-    const response = await openai.responses.create({
+    const stream = await openai.responses.create({
       model: "gpt-5.6",
       input: prompt.trim(),
+      stream: true,
     });
 
-    return res.status(200).json({
-      response: response.output_text,
-    });
+    res.status(200);
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    for await (const event of stream) {
+      if (event.type === "response.output_text.delta") {
+        console.log("CHUNK:", event.delta);
+
+        res.write(`data: ${JSON.stringify(event.delta)}\n\n`);
+      }
+
+      if (event.type === "response.completed") {
+        res.write("data: [DONE]\n\n");
+      }
+    }
+
+    res.end();
   } catch (error) {
-    console.error("OpenAI request failed:", error);
+    console.error("OpenAI streaming request failed:", error);
 
     return res.status(500).json({
       error: "Failed to generate AI response",

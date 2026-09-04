@@ -7,8 +7,9 @@ import {
   Text,
   TextInput,
   View,
-  ScrollView
+  ScrollView,
 } from "react-native";
+import Markdown from "@ronradtke/react-native-markdown-display";
 
 const API_URL = "http://localhost:3000";
 
@@ -38,13 +39,54 @@ export default function HomeScreen() {
         }),
       });
 
-      const data = await result.json();
-
       if (!result.ok) {
+        const data = await result.json();
+
         throw new Error(data.error || "AI request failed");
       }
 
-      setResponse(data.response);
+      if (!result.body) {
+        throw new Error("Streaming is not supported");
+      }
+
+      const reader = result.body.getReader();
+      const decoder = new TextDecoder();
+
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) {
+          break;
+        }
+
+        buffer += decoder.decode(value, {
+          stream: true,
+        });
+
+        const events = buffer.split("\n\n");
+
+        buffer = events.pop() || "";
+
+        for (const event of events) {
+          if (!event.startsWith("data: ")) {
+            continue;
+          }
+
+          const data = event.replace("data: ", "");
+
+          if (data === "[DONE]") {
+            continue;
+          }
+
+          const chunk = JSON.parse(data);
+
+          console.log("FRONTEND CHUNK:", chunk);
+
+          setResponse((current) => current + chunk);
+        }
+      }
     } catch (error) {
       console.error("AI request failed:", error);
 
@@ -60,50 +102,47 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      
       <ScrollView>
-      <View style={styles.content}>
-        <Text style={styles.brand}>Modern Mobile Lab</Text>
+        <View style={styles.content}>
+          <Text style={styles.brand}>Modern Mobile Lab</Text>
 
-        <Text style={styles.title}>AI Playground</Text>
+          <Text style={styles.title}>AI Playground</Text>
 
-        <Text style={styles.subtitle}>
-          Ask an AI model anything
-        </Text>
+          <Text style={styles.subtitle}>Ask an AI model anything</Text>
 
-        <TextInput
-          value={prompt}
-          onChangeText={setPrompt}
-          placeholder="Ask something..."
-          placeholderTextColor="#888888"
-          multiline
-          style={styles.input}
-        />
+          <TextInput
+            value={prompt}
+            onChangeText={setPrompt}
+            placeholder="Ask something..."
+            placeholderTextColor="#888888"
+            multiline
+            style={styles.input}
+          />
 
-        <Pressable
-          onPress={askAI}
-          disabled={loading}
-          style={({ pressed }) => [
-            styles.button,
-            pressed && styles.buttonPressed,
-            loading && styles.buttonDisabled,
-          ]}
-        >
-          {loading ? (
-            <ActivityIndicator color="#ffffff" />
-          ) : (
-            <Text style={styles.buttonText}>Ask AI</Text>
-          )}
-        </Pressable>
+          <Pressable
+            onPress={askAI}
+            disabled={loading}
+            style={({ pressed }) => [
+              styles.button,
+              pressed && styles.buttonPressed,
+              loading && styles.buttonDisabled,
+            ]}
+          >
+            {loading ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <Text style={styles.buttonText}>Ask AI</Text>
+            )}
+          </Pressable>
 
-        <View style={styles.responseContainer}>
-          <Text style={styles.responseTitle}>AI Response</Text>
+          <View style={styles.responseContainer}>
+            <Text style={styles.responseTitle}>AI Response</Text>
 
-          <Text style={styles.response}>
-            {response || "Your AI response will appear here."}
-          </Text>
+            <Markdown>
+              {response || "Your AI response will appear here."}
+            </Markdown>
+          </View>
         </View>
-      </View>
       </ScrollView>
     </SafeAreaView>
   );
