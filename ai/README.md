@@ -25,10 +25,16 @@ The goal of this series is to explore how modern AI capabilities can be designed
 
 | # | Experiment | Status |
 |---|---|---|
-| 01 | Mobile AI / LLM Integration | In progress |
-| 02 | Structured AI / JSON Schema | Planned |
+| 01 — Part 1 | Mobile AI / LLM Integration | Completed |
+| 01 — Part 2 | AI Streaming & Chunks | Completed |
+| 02 | Structured AI / JSON Schema | In progress |
 | 03 | Tool Calling | Planned |
-| 04 | — | Planned |
+| 04 | RAG & Embeddings | Planned |
+| 05 | Multimodal AI | Planned |
+| 06 | Voice AI | Planned |
+| 07 | Agentic Workflows | Planned |
+| 08 | Mobile AI Architecture | Planned |
+| 09 | Production AI | Planned |
 
 ## About
 
